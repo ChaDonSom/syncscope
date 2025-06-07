@@ -1,0 +1,32 @@
+{
+  "name": "syncscope",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npx @tailwindcss/cli -i ./src/style.css -o ./src/tailwind-output.css --watch\" \"vite\"",
+    "build": "npx @tailwindcss/cli -i ./src/style.css -o ./src/tailwind-output.css && vue-tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --noEmit",
+    "tailwind:build": "npx @tailwindcss/cli -i ./src/style.css -o ./src/tailwind-output.css",
+    "tailwind:watch": "npx @tailwindcss/cli -i ./src/style.css -o ./src/tailwind-output.css --watch"
+  },
+  "dependencies": {
+    "@instantdb/core": "^0.19.18",
+    "@instantdb/react": "^0.19.18",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^4.1.8",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.8",
+    "@tailwindcss/postcss": "^4.1.8",
+    "@types/node": "^22.15.30",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vue-tsc": "^2.2.10"
+  }
+}
