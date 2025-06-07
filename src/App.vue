@@ -253,17 +253,18 @@ async function testInstantDBWrite() {
     addDebugLog("info", "Testing InstantDB write...")
 
     const newEvent = {
-      id: `test-${Date.now()}`,
       timestamp: Date.now(),
       type: "write",
       detail: `Test event created at ${new Date().toLocaleTimeString()}`,
     }
 
-    await db.transact([db.tx.syncEvents[newEvent.id].update(newEvent)])
+    // Use the correct InstantDB transaction API
+    const { tx, id } = await import("@instantdb/core")
+    await db.transact(tx.syncEvents[id()].update(newEvent))
 
-    addDebugLog("success", `Successfully wrote test event: ${newEvent.id}`)
+    addDebugLog("success", `Successfully wrote test event with generated ID`)
   } catch (error) {
-    addDebugLog("error", `Write failed: ${error}`)
+    addDebugLog("error", `Write failed: ${JSON.stringify(error)}`)
   }
 }
 
@@ -276,14 +277,15 @@ async function fetchAllData() {
   try {
     addDebugLog("info", "Fetching all data from InstantDB...")
 
-    const result = await db.query({ syncEvents: {} })
-    addDebugLog("info", `Raw query result: ${JSON.stringify(result, null, 2)}`)
+    const result = db.subscribeQuery({ syncEvents: {} }, (data: any) => {
+      addDebugLog("info", `Raw query result: ${JSON.stringify(data, null, 2)}`)
 
-    if (result.data?.syncEvents) {
-      addDebugLog("success", `Found ${result.data.syncEvents.length} events`)
-    } else {
-      addDebugLog("info", "No events found in database")
-    }
+      if (data.data?.syncEvents) {
+        addDebugLog("success", `Found ${data.data.syncEvents.length} events`)
+      } else {
+        addDebugLog("info", "No events found in database")
+      }
+    })
   } catch (error) {
     addDebugLog("error", `Fetch failed: ${error}`)
   }
@@ -302,24 +304,26 @@ onMounted(async () => {
   try {
     addDebugLog("info", "Initializing InstantDB connection...")
 
-    const { init } = await import("@instantdb/core")
+    const { init, tx, id } = await import("@instantdb/core")
     db = init({ appId: projectId })
 
     addDebugLog("success", "InstantDB client initialized successfully")
 
     // Subscribe to sync events
     addDebugLog("info", "Setting up query subscription...")
-    const query = db.query({ syncEvents: {} })
 
-    unsubscribe = query.subscribe((result: any) => {
+    unsubscribe = db.subscribeQuery({ syncEvents: {} }, (result: any) => {
       addDebugLog("info", `Query result received: ${JSON.stringify(result, null, 2)}`)
 
       if (result.data && result.data.syncEvents) {
-        syncEvents.value = result.data.syncEvents
+        // Convert InstantDB data to our format
+        const events = Object.values(result.data.syncEvents) as SyncEvent[]
+        syncEvents.value = events
         isConnected.value = true
-        addDebugLog("success", `Loaded ${result.data.syncEvents.length} sync events from InstantDB`)
+        addDebugLog("success", `Loaded ${events.length} sync events from InstantDB`)
       } else {
         addDebugLog("info", "No sync events found in database yet")
+        syncEvents.value = [] // Clear mock data when connected but no real data
         isConnected.value = true // Still connected, just no data
       }
     })
