@@ -137,7 +137,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue"
 import type { SyncEvent } from "./types"
 
 // Configuration - replace with your actual InstantDB project ID
-const projectId = "syncscope-demo" // TODO: Replace with real project ID when ready
+const projectId = import.meta.env.VITE_INSTANTDB_PROJECT_ID || "your-project-id"
 
 // Reactive state
 const syncEvents = ref<SyncEvent[]>([])
@@ -146,6 +146,7 @@ const unsubscribeRef = ref<(() => void) | null>(null)
 
 // InstantDB client - will be initialized when needed
 let db: any = null
+let unsubscribe: (() => void) | null = null
 
 // Computed statistics
 const stats = computed(() => {
@@ -185,17 +186,17 @@ onMounted(async () => {
   // Try to initialize InstantDB (optional for demo)
   try {
     // Uncomment when you have a real InstantDB project ID:
-    // const { init } = await import('@instantdb/core')
-    // db = init({ appId: projectId })
-    //
-    // // Subscribe to sync events
-    // const query = db.query({ syncEvents: {} })
-    // unsubscribe = query.subscribe((result: any) => {
-    //   if (result.data.syncEvents) {
-    //     syncEvents.value = result.data.syncEvents
-    //     isConnected.value = true
-    //   }
-    // })
+    const { init } = await import("@instantdb/core")
+    db = init({ appId: projectId })
+
+    // Subscribe to sync events
+    const query = db.query({ syncEvents: {} })
+    unsubscribe = query.subscribe((result: any) => {
+      if (result.data.syncEvents) {
+        syncEvents.value = result.data.syncEvents
+        isConnected.value = true
+      }
+    })
 
     console.log("InstantDB setup ready (currently using mock data)")
   } catch (error) {
