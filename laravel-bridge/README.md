@@ -11,12 +11,14 @@ Laravel App → HTTP API → Node.js Bridge Service → InstantDB Admin SDK → 
 ## Setup
 
 1. **Install dependencies:**
+
    ```bash
    cd bridge-service
    npm install
    ```
 
 2. **Configure environment:**
+
    ```bash
    cp .env.example .env
    # Edit .env with your InstantDB credentials
@@ -30,11 +32,13 @@ Laravel App → HTTP API → Node.js Bridge Service → InstantDB Admin SDK → 
 ## API Endpoints
 
 ### Health Check
+
 ```http
 GET /health
 ```
 
 ### Query Data
+
 ```http
 POST /query
 Content-Type: application/json
@@ -45,6 +49,7 @@ Content-Type: application/json
 ```
 
 ### Create/Update Data
+
 ```http
 POST /transact
 Content-Type: application/json
@@ -65,6 +70,7 @@ Content-Type: application/json
 ```
 
 ### Authentication
+
 ```http
 POST /auth/create-token
 Content-Type: application/json

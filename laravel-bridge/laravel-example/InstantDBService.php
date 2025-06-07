@@ -19,7 +19,7 @@ class InstantDBService
             'timeout' => 30,
             'connect_timeout' => 10,
         ]);
-        
+
         $this->bridgeUrl = config('services.instantdb.bridge_url', 'http://localhost:3001');
         $this->apiKey = config('services.instantdb.api_key');
     }
@@ -36,7 +36,7 @@ class InstantDBService
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             if (!$data['success']) {
                 throw new \Exception('Query failed: ' . ($data['message'] ?? 'Unknown error'));
             }
@@ -47,7 +47,7 @@ class InstantDBService
                 'query' => $query,
                 'error' => $e->getMessage(),
             ]);
-            
+
             throw new \Exception('Failed to query InstantDB: ' . $e->getMessage());
         }
     }
@@ -64,7 +64,7 @@ class InstantDBService
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             if (!$data['success']) {
                 throw new \Exception('Transaction failed: ' . ($data['message'] ?? 'Unknown error'));
             }
@@ -75,7 +75,7 @@ class InstantDBService
                 'operations' => $operations,
                 'error' => $e->getMessage(),
             ]);
-            
+
             throw new \Exception('Failed to execute transaction: ' . $e->getMessage());
         }
     }
@@ -108,16 +108,16 @@ class InstantDBService
     public function getSyncEvents(int $limit = 100): array
     {
         $cacheKey = "instantdb_sync_events_{$limit}";
-        
+
         return Cache::remember($cacheKey, 60, function () use ($limit) {
             $result = $this->query(['syncEvents' => []]);
-            
+
             $events = collect($result['syncEvents'] ?? [])
                 ->sortByDesc('timestamp')
                 ->take($limit)
                 ->values()
                 ->all();
-                
+
             return $events;
         });
     }
@@ -134,7 +134,7 @@ class InstantDBService
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             if (!$data['success']) {
                 throw new \Exception('Token creation failed: ' . ($data['message'] ?? 'Unknown error'));
             }
@@ -145,7 +145,7 @@ class InstantDBService
                 'email' => $email,
                 'error' => $e->getMessage(),
             ]);
-            
+
             throw new \Exception('Failed to create auth token: ' . $e->getMessage());
         }
     }
@@ -162,14 +162,14 @@ class InstantDBService
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             return $data['success'] ?? false;
         } catch (RequestException $e) {
             Log::error('InstantDB sign out failed', [
                 'params' => $params,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return false;
         }
     }
@@ -189,7 +189,7 @@ class InstantDBService
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             if (!$data['success']) {
                 throw new \Exception('Presence query failed: ' . ($data['message'] ?? 'Unknown error'));
             }
@@ -201,7 +201,7 @@ class InstantDBService
                 'room' => $room,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [];
         }
     }
@@ -221,7 +221,7 @@ class InstantDBService
             Log::warning('InstantDB bridge health check failed', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return false;
         }
     }
