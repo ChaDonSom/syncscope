@@ -127,6 +127,58 @@
             <p class="font-mono">{{ projectId || "Not configured" }}</p>
           </div>
         </div>
+
+        <!-- Test Actions -->
+        <div class="mt-4 flex space-x-2">
+          <button
+            @click="testInstantDBWrite"
+            :disabled="!db"
+            class="px-3 py-1 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
+          >
+            Test Write
+          </button>
+          <button
+            @click="fetchAllData"
+            :disabled="!db"
+            class="px-3 py-1 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
+          >
+            Fetch Data
+          </button>
+        </div>
+      </section>
+
+      <!-- Visual Debug Console -->
+      <section class="mt-8 bg-black rounded-lg p-6 text-green-400 font-mono text-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-white">Debug Console</h3>
+          <button
+            @click="debugLogs = []"
+            class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+
+        <div class="h-64 overflow-y-auto space-y-1">
+          <div v-if="debugLogs.length === 0" class="text-gray-500">Waiting for debug messages...</div>
+
+          <div v-for="log in debugLogs" :key="log.timestamp" class="flex items-start space-x-2">
+            <span class="text-gray-500 text-xs flex-shrink-0">
+              {{ formatDate(log.timestamp) }}
+            </span>
+            <span
+              :class="{
+                'text-green-400': log.level === 'success',
+                'text-red-400': log.level === 'error',
+                'text-blue-400': log.level === 'info',
+              }"
+              class="text-xs flex-shrink-0 uppercase"
+            >
+              [{{ log.level }}]
+            </span>
+            <span class="text-gray-300 text-xs break-all">{{ log.message }}</span>
+          </div>
+        </div>
       </section>
     </div>
   </main>
@@ -143,6 +195,21 @@ const projectId = import.meta.env.VITE_INSTANTDB_PROJECT_ID || "your-project-id"
 const syncEvents = ref<SyncEvent[]>([])
 const isConnected = ref(false)
 const unsubscribeRef = ref<(() => void) | null>(null)
+const debugLogs = ref<Array<{ timestamp: number; level: "info" | "error" | "success"; message: string }>>([])
+
+// Debug logging function
+function addDebugLog(level: "info" | "error" | "success", message: string) {
+  debugLogs.value.unshift({
+    timestamp: Date.now(),
+    level,
+    message,
+  })
+  // Keep only last 20 logs
+  if (debugLogs.value.length > 20) {
+    debugLogs.value = debugLogs.value.slice(0, 20)
+  }
+  console.log(`[${level.toUpperCase()}]`, message)
+}
 
 // InstantDB client - will be initialized when needed
 let db: any = null
@@ -175,32 +242,92 @@ function getEventBadgeClass(type: SyncEvent["type"]): string {
   }
 }
 
+// Test functions for InstantDB
+async function testInstantDBWrite() {
+  if (!db) {
+    addDebugLog("error", "Database not initialized")
+    return
+  }
+
+  try {
+    addDebugLog("info", "Testing InstantDB write...")
+
+    const newEvent = {
+      id: `test-${Date.now()}`,
+      timestamp: Date.now(),
+      type: "write",
+      detail: `Test event created at ${new Date().toLocaleTimeString()}`,
+    }
+
+    await db.transact([db.tx.syncEvents[newEvent.id].update(newEvent)])
+
+    addDebugLog("success", `Successfully wrote test event: ${newEvent.id}`)
+  } catch (error) {
+    addDebugLog("error", `Write failed: ${error}`)
+  }
+}
+
+async function fetchAllData() {
+  if (!db) {
+    addDebugLog("error", "Database not initialized")
+    return
+  }
+
+  try {
+    addDebugLog("info", "Fetching all data from InstantDB...")
+
+    const result = await db.query({ syncEvents: {} })
+    addDebugLog("info", `Raw query result: ${JSON.stringify(result, null, 2)}`)
+
+    if (result.data?.syncEvents) {
+      addDebugLog("success", `Found ${result.data.syncEvents.length} events`)
+    } else {
+      addDebugLog("info", "No events found in database")
+    }
+  } catch (error) {
+    addDebugLog("error", `Fetch failed: ${error}`)
+  }
+}
+
 // Setup subscription and cleanup
 
 onMounted(async () => {
-  console.log("SyncScope dashboard mounted")
+  addDebugLog("info", "SyncScope dashboard mounted")
+  addDebugLog("info", `Project ID: ${projectId}`)
 
   // For now, start with mock data
   addMockData()
 
-  // Try to initialize InstantDB (optional for demo)
+  // Try to initialize InstantDB
   try {
-    // Uncomment when you have a real InstantDB project ID:
+    addDebugLog("info", "Initializing InstantDB connection...")
+
     const { init } = await import("@instantdb/core")
     db = init({ appId: projectId })
 
+    addDebugLog("success", "InstantDB client initialized successfully")
+
     // Subscribe to sync events
+    addDebugLog("info", "Setting up query subscription...")
     const query = db.query({ syncEvents: {} })
+
     unsubscribe = query.subscribe((result: any) => {
-      if (result.data.syncEvents) {
+      addDebugLog("info", `Query result received: ${JSON.stringify(result, null, 2)}`)
+
+      if (result.data && result.data.syncEvents) {
         syncEvents.value = result.data.syncEvents
         isConnected.value = true
+        addDebugLog("success", `Loaded ${result.data.syncEvents.length} sync events from InstantDB`)
+      } else {
+        addDebugLog("info", "No sync events found in database yet")
+        isConnected.value = true // Still connected, just no data
       }
     })
 
-    console.log("InstantDB setup ready (currently using mock data)")
+    addDebugLog("success", "InstantDB subscription active")
   } catch (error) {
-    console.log("Running with mock data:", error)
+    addDebugLog("error", `InstantDB connection failed: ${error}`)
+    addDebugLog("info", "Falling back to mock data")
     isConnected.value = false
   }
 })
